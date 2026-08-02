@@ -1,15 +1,12 @@
 import { Donation, StreamerConfig } from './types';
 
-// In-memory mock storage for local demo & vercel preview without external DB setup
-// Supports automatic matching & realtime event simulation
-
 let donations: Donation[] = [
   {
     id: 'don-demo-1',
     donorName: 'SultanStream',
     amount: 50000,
     uniqueAmount: 50012,
-    message: 'Semangat terus bang livestream-nya! Sukses selalu 🔥',
+    message: 'Semangat livestream-nya bang! Sukses selalu 🔥',
     mediaType: 'text',
     status: 'PAID',
     createdAt: new Date(Date.now() - 3600000).toISOString(),
@@ -18,17 +15,16 @@ let donations: Donation[] = [
 ];
 
 let streamerConfig: StreamerConfig = {
-  streamerName: 'SeaBank Streamer',
-  qrisImageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=00020101021126580016ID.CO.QRIS.WWW01189360091400000000005204581253033605802ID5915SEABANK_STREAM6007JAKARTA6105121106304C102',
-  seaBankName: 'AZIZUL STREAMER',
-  seaBankNumber: '901234567890',
+  streamerName: 'TOPUPWITHJIJULCHANNEL',
+  qrisImageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=00020101021126680016ID.CO.QRIS.WWW01189360081500000000005204581253033605802ID5922TOPUPWITHJIJULCHANNEL6007JAKARTA6105121106304C102',
+  qrisMerchantName: 'TOPUPWITHJIJULCHANNEL',
+  qrisNmid: 'ID1025453265676',
   minAmountText: 5000,
   minAmountVn: 10000,
   minAmountVideo: 25000,
-  secretKey: 'seabank-secret-key-123',
+  secretKey: 'qris-interactive-secret-123',
 };
 
-// Global queue for pending real-time events for OBS broadcast
 let eventListeners: Array<(donation: Donation) => void> = [];
 
 export function getStreamerConfig(): StreamerConfig {
@@ -51,7 +47,6 @@ export function createDonation(data: {
   mediaType: 'text' | 'vn' | 'video';
   mediaUrl?: string;
 }): Donation {
-  // Generate unique 3-digit code (e.g., 10000 -> 10047)
   const randomUniqueCode = Math.floor(Math.random() * 499) + 1;
   const uniqueAmount = data.amount + randomUniqueCode;
 

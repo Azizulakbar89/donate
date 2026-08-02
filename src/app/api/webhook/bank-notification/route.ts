@@ -6,39 +6,41 @@ export async function POST(request: Request) {
     const config = getStreamerConfig();
     const secretKeyHeader = request.headers.get('x-secret-key');
 
-    // Optional secret key check (if provided in header)
     if (secretKeyHeader && secretKeyHeader !== config.secretKey) {
       return NextResponse.json({ success: false, error: 'Unauthorized secret key' }, { status: 401 });
     }
 
     const body = await request.json();
-    console.log('[Webhook Received iOS]', body);
+    console.log('[Webhook Received InterActive QRIS / Notification]', body);
 
-    // Extract text payload from Shortcut input
-    // iOS Shortcut can send { text: "Anda menerima transfer sebesar Rp 15.045 dari SHINTA..." }
+    // Support both InterActive QRIS Webhook payload & iPhone Shortcut Push Notification Text
+    // InterActive QRIS webhook payload keys: amount / nominal / total_amount / text / body
     const notificationText = body.text || body.message || body.body || JSON.stringify(body);
+    const directNominal = body.amount || body.nominal || body.total_amount;
 
-    // Extract all numbers from notification text
-    // Example RegEx to match Rp 15.045 or 15045 or 15.045,00
-    const numbersMatch = notificationText.replace(/\./g, '').match(/\d+/g);
+    let matchedDonation = null;
 
-    if (!numbersMatch || numbersMatch.length === 0) {
-      return NextResponse.json({
-        success: false,
-        message: 'No nominal number found in notification body',
-        receivedText: notificationText
-      }, { status: 400 });
+    if (directNominal) {
+      const num = parseInt(directNominal, 10);
+      const found = findPendingByAmount(num);
+      if (found) {
+        matchedDonation = markAsPaid(found.id);
+      }
     }
 
-    // Find matching pending donation
-    let matchedDonation = null;
-    for (const numStr of numbersMatch) {
-      const num = parseInt(numStr, 10);
-      if (num >= 1000) {
-        const found = findPendingByAmount(num);
-        if (found) {
-          matchedDonation = markAsPaid(found.id);
-          break;
+    if (!matchedDonation) {
+      // Extract numbers from notification text
+      const numbersMatch = notificationText.replace(/\./g, '').match(/\d+/g);
+      if (numbersMatch) {
+        for (const numStr of numbersMatch) {
+          const num = parseInt(numStr, 10);
+          if (num >= 1000) {
+            const found = findPendingByAmount(num);
+            if (found) {
+              matchedDonation = markAsPaid(found.id);
+              break;
+            }
+          }
         }
       }
     }
@@ -46,27 +48,26 @@ export async function POST(request: Request) {
     if (matchedDonation) {
       return NextResponse.json({
         success: true,
-        message: 'Payment matched & triggered OBS Alert!',
+        message: 'Pembayaran InterActive QRIS Berhasil & Alert OBS Aktif!',
         donation: matchedDonation
       });
     }
 
-    // Fallback: If no exact pending match was found, mark the latest pending donation as paid if amounts match base amount
+    // Auto-approve earliest pending for testing ease if active pending exists
     const pendingList = getDonations().filter(d => d.status === 'PENDING');
     if (pendingList.length > 0) {
-      // Auto-approve earliest pending for testing ease
       const autoApproved = markAsPaid(pendingList[pendingList.length - 1].id);
       return NextResponse.json({
         success: true,
-        message: 'Payment matched to active pending donation!',
+        message: 'Pembayaran terkonfirmasi pada donasi pending aktif!',
         donation: autoApproved
       });
     }
 
     return NextResponse.json({
       success: false,
-      message: 'No matching PENDING donation found for this amount.',
-      parsedNumbers: numbersMatch
+      message: 'Tidak ada transaksi donasi PENDING yang cocok.',
+      receivedBody: body
     });
 
   } catch (error: any) {

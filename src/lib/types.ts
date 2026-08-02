@@ -14,8 +14,8 @@ export interface Donation {
 export interface StreamerConfig {
   streamerName: string;
   qrisImageUrl: string;
-  seaBankName: string;
-  seaBankNumber: string;
+  qrisMerchantName: string;
+  qrisNmid: string;
   minAmountText: number;
   minAmountVn: number;
   minAmountVideo: number;
